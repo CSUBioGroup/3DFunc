@@ -25,6 +25,8 @@ installpkg <- function(x){
 # install necessary packages
 required_packages  <- c("optparse","stringr")
 lapply(required_packages,installpkg)
+library(optparse)
+library(stringr)
 
 getExtension <- function(file){ 
     ex <- strsplit(basename(file), split="\\.")[[1]]
@@ -63,7 +65,7 @@ option_list = list(
               help="The path of normal/control hic matrix in .hic format. This file is required.", metavar="character"),
   make_option(c("--pair"), type="character", default="pair_db", 
               help="The path of variant-gene pair in .txt format, seperated by tab. If no file provided, the predicted v-g pair from PCAWG will be used.", metavar="character"),             
-  make_option(c("--variants"), type="character", default="all", 
+  make_option(c("--variants"), type="character", default="SNP", 
               help="The type of variants to calculate, please input SV, SNP or ICT. If no input provided, SNP will be calculated by default.", metavar="character"),           
   make_option(c("--extend"), type="integer", default="5", 
               help="The fold of length for extending variant-gene pair to calculate the flexible IF. The fold of 5 will be set by default.", metavar="integer"),
@@ -290,12 +292,15 @@ pair$expr_change<-as.numeric(pair$expr_change)
 pair$IF_change<-as.numeric(pair$IF_change)
 pair$pred1<-eDecay(pair$IF_change, 151.17,38.43)
 pair$pred2<-eDecay(pair$IF_change, 205.74,110.93)
-pair$diff<-abs(log2(pair$expr_change)+log2(pair$IF_change))
+pair$diff<-1/abs(log2(pair$expr_change)+log2(pair$IF_change))
 pair$diff2<-Range(pair$diff)
 
 for(i in 1:nrow(pair)){
   p<-t.test(pair$diff,mu=pair[i,"diff"],alternative="less")
   pair[i,"p.value"]=p$p.value
 }
+pair<-pair[,c(1:8,9,10,14,15)]
+colnames(pair)<-c("variant","gene","chrom1","start1","end1","chrom2","start2","end2","expr_change","IF_change","3dToFunc","p.value")
+write.table(pair,paste(opt$out_dir,"3dToFunc_output.txt",sep="/"),sep="\t",quote=F,row.names=F)
 
-write.table(pair,"~/Downloads/test_3.txt",sep="\t")
+print("Finish running!")
